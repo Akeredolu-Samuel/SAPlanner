@@ -64,3 +64,6 @@ app.listen(PORT, () => {
     console.error('Failed to start scheduler:', err.message);
   }
 });
+
+// Export the app for Vercel serverless environment
+module.exports = app;
