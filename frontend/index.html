@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart Academic Planner</title>
+  <meta name="description" content="SAPlanner — the smart way to manage your academic tasks, deadlines and reminders.">
+
+  <!-- Google Fonts -->
+  <link
+    href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap"
+    rel="stylesheet">
+
+
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+
+  <!-- App styles -->
+  <link rel="stylesheet" href="/styles/style.css">
+</head>
+
+<body>
+
+  <!-- Authentication screen -->
+  <div id="auth-screen">
+    <div class="auth-box">
+      <div class="auth-logo">SAPlanner</div>
+      <div class="auth-tagline">Smart Academic Planner</div>
+
+      <!--Log In / Register -->
+      <div class="auth-tabs">
+        <button class="auth-tab active" onclick="switchAuthTab('login', this)">Log In</button>
+        <button class="auth-tab" onclick="switchAuthTab('register', this)">Register</button>
+      </div>
+
+      <!-- LOGIN FORM -->
+      <div id="login-form">
+        <div class="form-group">
+          <label class="form-label">Email</label>
+          <input class="form-input" id="login-email" type="email" placeholder="student@university.edu"
+            autocomplete="email" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Password</label>
+          <input class="form-input" id="login-pass" type="password" placeholder="••••••••"
+            onkeydown="if(event.key==='Enter') doLogin()" autocomplete="current-password" />
+        </div>
+        <button class="btn-primary" onclick="doLogin()">Log In</button>
+        <div class="auth-error" id="login-error"></div>
+      </div>
+
+      <!-- REGISTER FORM -->
+      <div id="register-form" style="display:none">
+        <div class="form-group">
+          <label class="form-label">Username <span style="color:var(--muted);font-size:9px;letter-spacing:.5px">(must be
+              unique)</span></label>
+          <input class="form-input" id="reg-name" type="text" placeholder="e.g. jane_doe" autocomplete="username" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email</label>
+          <input class="form-input" id="reg-email" type="email" placeholder="student@university.edu"
+            autocomplete="email" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Password</label>
+          <input class="form-input" id="reg-pass" type="password" placeholder="Min. 6 characters"
+            onkeydown="if(event.key==='Enter') doRegister()" autocomplete="new-password" />
+        </div>
+        <button class="btn-primary" onclick="doRegister()">Create Account</button>
+        <div class="auth-error" id="reg-error"></div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- Main App (hidden until login) -->
+  <div id="app">
+
+    <!-- TOP BAR -->
+    <div class="topbar">
+      <div class="topbar-logo">SAPlanner</div>
+      <div class="topbar-right">
+        <!-- Backend health indicator -->
+        <div class="api-status">
+          <div class="api-dot" id="api-dot"></div>
+          <span id="api-label">checking…</span>
+        </div>
+
+        <!-- Logged-in user's name -->
+        <div class="topbar-user">Hi, <span id="user-display"></span></div>
+
+        <!-- Notification bell -->
+        <button class="notif-btn" onclick="toggleNotifPanel()" title="Notifications" id="notif-btn">
+          <i data-lucide="bell" class="icon-sm"></i>
+          <span class="notif-badge" id="notif-badge"></span>
+        </button>
+
+        <!-- Logout -->
+        <button class="btn-logout" onclick="doLogout()">
+          <i data-lucide="log-out" class="icon-xs"></i> Log Out
+        </button>
+      </div>
+    </div>
+
+    <!-- NOTIFICATION SLIDE-DOWN PANEL -->
+    <div class="notif-panel" id="notif-panel">
+      <div class="notif-panel-header">
+        Notifications
+        <button class="notif-clear" onclick="clearNotifs()">Clear all</button>
+      </div>
+      <div id="notif-list"></div>
+    </div>
+
+    <!-- CONTENT AREA: sidebar + main views -->
+    <div class="main-layout">
+
+      <!-- SIDEBAR NAVIGATION -->
+      <nav class="sidebar">
+        <div class="sidebar-section">
+          <div class="sidebar-label">Views</div>
+
+          <div class="nav-item active" id="nav-dashboard" onclick="showView('dashboard', this)">
+            <i data-lucide="layout-dashboard" class="nav-icon"></i>
+            Dashboard
+          </div>
+
+          <div class="nav-item" id="nav-tasks" onclick="showView('tasks', this)">
+            <i data-lucide="list-checks" class="nav-icon"></i>
+            All Tasks
+          </div>
+
+          <div class="nav-item" id="nav-schedule" onclick="showView('schedule', this)">
+            <i data-lucide="calendar-days" class="nav-icon"></i>
+            Schedule
+          </div>
+
+          <div class="nav-item" id="nav-profile" onclick="showView('profile', this)">
+            <i data-lucide="user-circle-2" class="nav-icon"></i>
+            Profile &amp; Settings
+          </div>
+        </div>
+
+        <!-- Category quick-filters -->
+        <div class="sidebar-section">
+          <div class="sidebar-label">Categories</div>
+
+          <div class="nav-item" onclick="filterByCategory('lecture')">
+            <span class="category-dot" style="background:var(--lecture)"></span>
+            Lectures
+          </div>
+          <div class="nav-item" onclick="filterByCategory('assignment')">
+            <span class="category-dot" style="background:var(--assignment)"></span>
+            Assignments
+          </div>
+          <div class="nav-item" onclick="filterByCategory('meeting')">
+            <span class="category-dot" style="background:var(--meeting)"></span>
+            Meetings
+          </div>
+          <div class="nav-item" onclick="filterByCategory('exam')">
+            <span class="category-dot" style="background:var(--exam)"></span>
+            Exams
+          </div>
+        </div>
+      </nav>
+
+      <!-- MAIN CONTENT AREA -->
+      <div class="content">
+
+        <!-- Dashboard View -->
+        <div class="view active" id="view-dashboard">
+          <div class="page-header">
+            <div>
+              <div class="page-title" id="dash-greeting">Good morning</div>
+              <div class="page-subtitle" id="dash-date"></div>
+            </div>
+            <button class="btn-add" onclick="openAddModal()">
+              <i data-lucide="plus" class="icon-xs"></i> Add Task
+            </button>
+          </div>
+
+          <!-- Quick stats row -->
+          <div class="stats-row">
+            <div class="stat-card c1">
+              <div class="stat-num" id="stat-total">—</div>
+              <div class="stat-label">Total Tasks</div>
+            </div>
+            <div class="stat-card c2">
+              <div class="stat-num" id="stat-today">—</div>
+              <div class="stat-label">Due Today</div>
+            </div>
+            <div class="stat-card c3">
+              <div class="stat-num" id="stat-overdue">—</div>
+              <div class="stat-label">Overdue</div>
+            </div>
+            <div class="stat-card c4">
+              <div class="stat-num" id="stat-done">—</div>
+              <div class="stat-label">Completed</div>
+            </div>
+          </div>
+
+          <div class="section-label-standalone">Upcoming Tasks</div>
+          <div class="tasks-grid" id="dash-tasks"></div>
+        </div>
+
+
+        <!-- All Tasks View -->
+        <div class="view" id="view-tasks">
+          <div class="page-header">
+            <div>
+              <div class="page-title">All Tasks</div>
+              <div class="page-subtitle">Your full academic workload</div>
+            </div>
+            <button class="btn-add" onclick="openAddModal()">
+              <i data-lucide="plus" class="icon-xs"></i> Add Task
+            </button>
+          </div>
+
+          <!-- Status / category filters -->
+          <div class="filter-row">
+            <button class="filter-btn active" onclick="setFilter('all', this)">All</button>
+            <button class="filter-btn" onclick="setFilter('pending', this)">Pending</button>
+            <button class="filter-btn" onclick="setFilter('done', this)">Completed</button>
+            <button class="filter-btn" onclick="setFilter('lecture', this)">Lectures</button>
+            <button class="filter-btn" onclick="setFilter('assignment', this)">Assignments</button>
+            <button class="filter-btn" onclick="setFilter('meeting', this)">Meetings</button>
+            <button class="filter-btn" onclick="setFilter('exam', this)">Exams</button>
+          </div>
+
+          <div class="tasks-grid" id="all-tasks"></div>
+        </div>
+
+
+        <!-- Schedule View -->
+        <div class="view" id="view-schedule">
+          <div class="page-header">
+            <div>
+              <div class="page-title">Schedule</div>
+              <div class="page-subtitle">Daily and weekly view</div>
+            </div>
+            <button class="btn-add" onclick="openAddModal()">
+              <i data-lucide="plus" class="icon-xs"></i> Add Task
+            </button>
+          </div>
+
+          <!-- Daily / Weekly tab toggle -->
+          <div class="sched-tabs">
+            <button class="sched-tab active" onclick="switchSchedTab('daily', this)">Daily</button>
+            <button class="sched-tab" onclick="switchSchedTab('weekly', this)">Weekly</button>
+          </div>
+
+          <!-- DAILY timeline -->
+          <div id="sched-daily">
+            <div class="day-nav">
+              <button class="day-nav-btn" onclick="changeDay(-1)" title="Previous day">
+                <i data-lucide="chevron-left"></i>
+              </button>
+              <div class="day-nav-label" id="day-label"></div>
+              <button class="day-nav-btn" onclick="changeDay(1)" title="Next day">
+                <i data-lucide="chevron-right"></i>
+              </button>
+              <button class="filter-btn" onclick="goToday(); renderDaily()" style="margin-left:8px;font-size:10px">
+                Today
+              </button>
+            </div>
+            <div class="daily-list" id="daily-list"></div>
+          </div>
+
+          <!-- WEEKLY grid -->
+          <div id="sched-weekly" style="display:none">
+            <div class="day-nav" style="margin-bottom:18px">
+              <button class="day-nav-btn" onclick="changeWeek(-1)" title="Previous week">
+                <i data-lucide="chevron-left"></i>
+              </button>
+              <div class="day-nav-label" id="week-label"></div>
+              <button class="day-nav-btn" onclick="changeWeek(1)" title="Next week">
+                <i data-lucide="chevron-right"></i>
+              </button>
+              <button class="filter-btn" onclick="currentWeekOffset=0; renderWeekly()"
+                style="margin-left:8px;font-size:10px">
+                This Week
+              </button>
+            </div>
+            <div style="overflow-x:auto">
+              <div class="week-grid" id="week-grid"></div>
+            </div>
+          </div>
+        </div>
+
+
+        <!-- Profile and Settings View -->
+        <div class="view" id="view-profile">
+          <div class="page-header">
+            <div>
+              <div class="page-title">Profile &amp; Settings</div>
+              <div class="page-subtitle">Manage your account and preferences</div>
+            </div>
+          </div>
+
+          <div class="profile-layout">
+
+            <!-- LEFT — Profile summary card -->
+            <div>
+              <div class="profile-card">
+                <div class="avatar-ring" id="profile-avatar">?</div>
+                <div class="profile-name" id="profile-card-name">—</div>
+                <div class="profile-email" id="profile-card-email">—</div>
+                <div class="profile-meta">Member since <span id="profile-since">—</span></div>
+
+                <!-- These rows appear only if the user has filled in the data -->
+                <div class="profile-meta" id="profile-institution-row" style="display:none">
+                  <i data-lucide="building-2" class="icon-xs inline-icon"></i>
+                  <span id="profile-card-institution"></span>
+                </div>
+                <div class="profile-meta" id="profile-dept-row" style="display:none">
+                  <i data-lucide="book-open" class="icon-xs inline-icon"></i>
+                  <span id="profile-card-dept"></span>
+                </div>
+                <div class="profile-meta" id="profile-year-row" style="display:none">
+                  <i data-lucide="calendar" class="icon-xs inline-icon"></i>
+                  Year <span id="profile-card-year"></span>
+                </div>
+
+                <div class="profile-bio" id="profile-card-bio" style="display:none"></div>
+
+                <!-- Mini task stats -->
+                <div class="profile-stats">
+                  <div class="pstat">
+                    <div class="pstat-num" id="ps-total">—</div>
+                    <div class="pstat-label">Tasks</div>
+                  </div>
+                  <div class="pstat">
+                    <div class="pstat-num" id="ps-done">—</div>
+                    <div class="pstat-label">Done</div>
+                  </div>
+                  <div class="pstat">
+                    <div class="pstat-num" id="ps-rate" style="color:var(--accent)">—%</div>
+                    <div class="pstat-label">Rate</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- RIGHT — Settings accordion -->
+            <div class="settings-panel">
+
+              <!-- ① Personal Information -->
+              <div class="settings-section s-profile">
+                <div class="section-head" onclick="toggleSection('sec-profile')">
+                  <div class="section-head-left">
+                    <span class="section-icon"><i data-lucide="user-pen" class="icon-sm"></i></span>
+                    <div>
+                      <div class="section-title">Personal Information</div>
+                      <div class="section-subtitle">Update your name and academic details</div>
+                    </div>
+                  </div>
+                  <i data-lucide="chevron-down" class="section-chevron open" id="chev-sec-profile"></i>
+                </div>
+                <div class="section-body open" id="sec-profile">
+                  <div class="form-row">
+                    <div class="form-group">
+                      <label class="form-label">Username / Display Name</label>
+                      <input class="form-input" id="p-name" type="text" placeholder="e.g. jane_doe" />
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label">Phone (optional)</label>
+                      <input class="form-input" id="p-phone" type="tel" placeholder="+234 800 000 0000" />
+                    </div>
+                  </div>
+                  <div class="form-row">
+                    <div class="form-group">
+                      <label class="form-label">Institution</label>
+                      <input class="form-input" id="p-institution" type="text" placeholder="University of Lagos" />
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label">Department</label>
+                      <input class="form-input" id="p-department" type="text" placeholder="Computer Science" />
+                    </div>
+                  </div>
+                  <div class="form-row">
+                    <div class="form-group">
+                      <label class="form-label">Year of Study</label>
+                      <select class="form-input" id="p-year">
+                        <option value="">— Select —</option>
+                        <option value="1">Year 1</option>
+                        <option value="2">Year 2</option>
+                        <option value="3">Year 3</option>
+                        <option value="4">Year 4</option>
+                        <option value="5">Year 5</option>
+                        <option value="Postgraduate">Postgraduate</option>
+                      </select>
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label">Email (cannot change)</label>
+                      <input class="form-input" id="p-email" type="email" disabled
+                        style="opacity:.45;cursor:not-allowed" />
+                    </div>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Bio (optional)</label>
+                    <textarea class="form-input" id="p-bio" placeholder="A short note about yourself…"
+                      style="min-height:60px"></textarea>
+                  </div>
+                  <button class="btn-save-section" id="btn-save-profile" onclick="saveProfile()">Save Changes</button>
+                </div>
+              </div>
+
+              <!-- ② Change Password -->
+              <div class="settings-section s-password">
+                <div class="section-head" onclick="toggleSection('sec-password')">
+                  <div class="section-head-left">
+                    <span class="section-icon"><i data-lucide="lock" class="icon-sm"></i></span>
+                    <div>
+                      <div class="section-title">Change Password</div>
+                      <div class="section-subtitle">Choose a strong password</div>
+                    </div>
+                  </div>
+                  <i data-lucide="chevron-down" class="section-chevron" id="chev-sec-password"></i>
+                </div>
+                <div class="section-body" id="sec-password">
+                  <div class="form-group">
+                    <label class="form-label">Current Password</label>
+                    <input class="form-input" id="pw-current" type="password" placeholder="••••••••" />
+                  </div>
+                  <div class="form-row">
+                    <div class="form-group">
+                      <label class="form-label">New Password</label>
+                      <input class="form-input" id="pw-new" type="password" placeholder="Min. 6 characters"
+                        oninput="checkPwStrength()" />
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label">Confirm New Password</label>
+                      <input class="form-input" id="pw-confirm" type="password" placeholder="Repeat new password" />
+                    </div>
+                  </div>
+                  <div style="font-size:10px;letter-spacing:.3px;margin-bottom:4px;height:14px" id="pw-strength-label">
+                  </div>
+                  <button class="btn-save-section" id="btn-save-pw" onclick="changePassword()">Update Password</button>
+                </div>
+              </div>
+
+              <!-- ③ Email Notifications + Reminder defaults -->
+              <div class="settings-section s-notif">
+                <div class="section-head" onclick="toggleSection('sec-notif')">
+                  <div class="section-head-left">
+                    <span class="section-icon"><i data-lucide="bell" class="icon-sm"></i></span>
+                    <div>
+                      <div class="section-title">Email Notifications</div>
+                      <div class="section-subtitle">Control when and how you get reminded</div>
+                    </div>
+                  </div>
+                  <i data-lucide="chevron-down" class="section-chevron" id="chev-sec-notif"></i>
+                </div>
+                <div class="section-body" id="sec-notif">
+
+                  <!-- Master on/off toggle -->
+                  <div class="notif-toggle-row">
+                    <div>
+                      <div class="notif-toggle-label">Email reminders</div>
+                      <div class="notif-toggle-desc">Receive email alerts before task deadlines</div>
+                    </div>
+                    <label class="toggle-switch">
+                      <input type="checkbox" id="notif-enabled" checked onchange="updateNotifToggleState()" />
+                      <span class="toggle-slider"></span>
+                    </label>
+                  </div>
+
+                  <!-- Default reminder times for new tasks -->
+                  <div id="notif-settings-body" style="margin-top:16px">
+                    <div
+                      style="font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:12px">
+                      Default reminder times for new tasks
+                    </div>
+                    <div class="reminder-chips-row" id="default-reminder-chips">
+                      <label class="reminder-chip" data-val="5">
+                        <input type="checkbox" value="5" /> 5 min
+                      </label>
+                      <label class="reminder-chip" data-val="30">
+                        <input type="checkbox" value="30" /> 30 min
+                      </label>
+                      <label class="reminder-chip" data-val="60">
+                        <input type="checkbox" value="60" /> 1 hour
+                      </label>
+                      <label class="reminder-chip" data-val="180">
+                        <input type="checkbox" value="180" /> 3 hours
+                      </label>
+                      <label class="reminder-chip" data-val="1440">
+                        <input type="checkbox" value="1440" /> 1 day
+                      </label>
+                      <label class="reminder-chip" data-val="2880">
+                        <input type="checkbox" value="2880" /> 2 days
+                      </label>
+                    </div>
+                    <!-- Explain how email reminders work -->
+                    <div class="reminder-explainer">
+                      <i data-lucide="info" class="icon-xs inline-icon"></i>
+                      <span>
+                        The backend checks for due tasks every minute and sends emails via Gmail (nodemailer).
+                        Reminders are only sent once per offset — so selecting "5 min" means you get one email
+                        5 minutes before the task is due.
+                      </span>
+                    </div>
+                  </div>
+
+                  <button class="btn-save-section" id="btn-save-notif" onclick="saveNotifSettings()">
+                    Save Notification Settings
+                  </button>
+                </div>
+              </div>
+
+              <!-- ④ Danger Zone -->
+              <div class="settings-section s-danger">
+                <div class="section-head" onclick="toggleSection('sec-danger')">
+                  <div class="section-head-left">
+                    <span class="section-icon"><i data-lucide="triangle-alert" class="icon-sm"></i></span>
+                    <div>
+                      <div class="section-title">Danger Zone</div>
+                      <div class="section-subtitle" style="color:var(--accent3)">Irreversible actions</div>
+                    </div>
+                  </div>
+                  <i data-lucide="chevron-down" class="section-chevron" id="chev-sec-danger"></i>
+                </div>
+                <div class="section-body" id="sec-danger">
+                  <div class="danger-action">
+                    <div>
+                      <div class="danger-action-title">Delete all tasks</div>
+                      <div class="danger-action-desc">Permanently remove all your tasks and reminders</div>
+                    </div>
+                    <button class="btn-danger" onclick="confirmDeleteAllTasks()">Delete Tasks</button>
+                  </div>
+                  <div class="danger-action">
+                    <div>
+                      <div class="danger-action-title">Delete account</div>
+                      <div class="danger-action-desc">Permanently delete your account and all data. This cannot be
+                        undone.</div>
+                    </div>
+                    <button class="btn-danger" onclick="confirmDeleteAccount()">Delete Account</button>
+                  </div>
+                </div>
+              </div>
+
+            </div><!-- end settings-panel -->
+          </div><!-- end profile-layout -->
+        </div><!-- end view-profile -->
+
+      </div><!-- end .content -->
+    </div><!-- end .main-layout -->
+  </div><!-- end #app -->
+
+
+  <!-- Confirm Modal -->
+  <div class="modal-overlay" id="confirm-modal">
+    <div class="confirm-modal modal">
+      <div class="modal-header">
+        <div class="modal-title" id="confirm-title">Confirm Action</div>
+        <button class="modal-close" onclick="closeConfirm()" title="Close">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size:12px;color:var(--muted);line-height:1.7;margin-bottom:16px" id="confirm-msg"></p>
+        <div class="form-group" id="confirm-pw-group" style="display:none">
+          <label class="form-label">Enter your password to confirm</label>
+          <input class="form-input" id="confirm-pw" type="password" placeholder="••••••••" />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" onclick="closeConfirm()">Cancel</button>
+        <button class="btn-danger" id="confirm-action-btn" style="padding:10px 20px">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- Task Modal -->
+  <div class="modal-overlay" id="task-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <div class="modal-title" id="modal-title">Add Task</div>
+        <button class="modal-close" onclick="closeModal()" title="Close">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <!-- Task title -->
+        <div class="form-group">
+          <label class="form-label">Task Title</label>
+          <input class="form-input" id="t-title" type="text" placeholder="e.g. Submit Research Paper" />
+        </div>
+
+        <!-- Category + Priority side by side -->
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Category</label>
+            <select class="form-input" id="t-cat">
+              <option value="assignment">Assignment</option>
+              <option value="lecture">Lecture</option>
+              <option value="meeting">Meeting</option>
+              <option value="exam">Exam</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Priority</label>
+            <select class="form-input" id="t-priority">
+              <option value="high">High</option>
+              <option value="medium">Medium</option>
+              <option value="low">Low</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Due date + time side by side -->
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Due Date</label>
+            <input class="form-input" id="t-date" type="date" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Time</label>
+            <input class="form-input" id="t-time" type="time" />
+          </div>
+        </div>
+
+        <!-- Optional notes -->
+        <div class="form-group">
+          <label class="form-label">Notes</label>
+          <textarea class="form-input" id="t-notes" placeholder="Optional details…"></textarea>
+        </div>
+
+        <!-- Email Reminder Picker -->
+        <div class="reminder-section">
+          <div class="reminder-title">
+            <i data-lucide="mail" class="icon-xs inline-icon"></i>
+            Email Reminders — when should we remind you?
+          </div>
+          <div class="reminder-options" id="reminder-options">
+            <label class="reminder-chip" data-val="5">
+              <input type="checkbox" value="5" /> 5 min before
+            </label>
+            <label class="reminder-chip" data-val="30">
+              <input type="checkbox" value="30" /> 30 min before
+            </label>
+            <label class="reminder-chip" data-val="60">
+              <input type="checkbox" value="60" /> 1 hour before
+            </label>
+            <label class="reminder-chip" data-val="180">
+              <input type="checkbox" value="180" /> 3 hours before
+            </label>
+            <label class="reminder-chip" data-val="1440">
+              <input type="checkbox" value="1440" /> 1 day before
+            </label>
+            <label class="reminder-chip" data-val="2880">
+              <input type="checkbox" value="2880" /> 2 days before
+            </label>
+          </div>
+          <div style="font-size:10px;color:var(--muted);margin-top:10px;letter-spacing:.3px">
+            Reminders are sent to your registered email address. You can pick more than one.
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn-secondary" onclick="closeModal()">Cancel</button>
+        <button class="btn-save" onclick="saveTask()" id="save-btn">Save Task</button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- Toast notifications container (bottom-right) -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- App JS -->
+  <script src="/scripts/app.js"></script>
+</body>
+
+</html>
