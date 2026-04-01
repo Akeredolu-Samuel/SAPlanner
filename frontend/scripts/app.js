@@ -284,6 +284,11 @@ function setFilter(filter, btn) {
 function filterByCategory(cat) {
   showView('tasks', document.getElementById('nav-tasks'));
   setFilter(cat, null);
+
+  // Auto-close sidebar on mobile after selecting a category
+  if (window.innerWidth <= 768) {
+    document.querySelector('.sidebar').classList.remove('show');
+  }
 }
 
 /** Render the filtered task list */
@@ -539,6 +544,17 @@ function showView(name, navEl) {
   if (name === 'schedule') renderDaily();
   if (name === 'profile')  loadProfile();
   if (typeof lucide !== 'undefined') { lucide.createIcons(); }
+
+  // Auto-close sidebar on mobile after selecting a view
+  if (window.innerWidth <= 768) {
+    document.querySelector('.sidebar').classList.remove('show');
+  }
+}
+
+/** Toggle the sidebar visibility on mobile */
+function toggleSidebar() {
+  const sidebar = document.querySelector('.sidebar');
+  sidebar.classList.toggle('show');
 }
 
 
